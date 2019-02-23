@@ -16,4 +16,4 @@ WORKDIR /home/pleo
 COPY . /home/pleo
 
 # When the container starts: build, test and run the app.
-CMD ./gradlew build && ./gradlew test && ./gradlew run
+CMD ./gradlew build --warning-mode=all && ./gradlew test && ./gradlew run
