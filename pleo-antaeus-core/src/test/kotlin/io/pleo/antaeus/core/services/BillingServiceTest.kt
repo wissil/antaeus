@@ -20,7 +20,6 @@ class BillingServiceTest {
 
         // create the billing service
         val billingService = MockBillingService(createMockBillingJob(observer), createMockTrigger())
-        val bs = BillingService(getPaymentProvider())
 
         // run the service asynchronously
         billingService.runAsync()

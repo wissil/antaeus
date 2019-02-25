@@ -35,8 +35,12 @@ class InvoiceServiceTest {
     }
 
     @Test
-    fun `will return non-empty pending and paid invoices`() {
+    fun `will return non-empty pending invoices`() {
         assert(invoiceService.fetchAllWithStatus(InvoiceStatus.PENDING).isNotEmpty())
+    }
+
+    @Test
+    fun `will return non-empty paid invoices`() {
         assert(invoiceService.fetchAllWithStatus(InvoiceStatus.PAID).isNotEmpty())
     }
 }
