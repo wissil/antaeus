@@ -1,6 +1,5 @@
 package io.pleo.antaeus.core.async
 
-import org.quartz.JobDetail
 import org.quartz.Trigger
 import org.quartz.impl.StdSchedulerFactory
 
@@ -8,8 +7,8 @@ import org.quartz.impl.StdSchedulerFactory
     This is an abstract asynchronous service. It takes in a Job and a Trigger which
     define an asynchronous job behaviour.
  */
-abstract class AsyncService(
-        private val job: JobDetail,
+abstract class AsyncService<J: AsyncJob>(
+        private val job: J,
         private val trigger: Trigger
 ) {
 
@@ -24,7 +23,7 @@ abstract class AsyncService(
         scheduler.context.putIfAbsent(getServiceName(), this)
 
         // schedule the job
-        scheduler.scheduleJob(job, trigger)
+        scheduler.scheduleJob(job.getJobDetail(), trigger)
 
         // start the scheduled service
         scheduler.start()
@@ -34,4 +33,12 @@ abstract class AsyncService(
         Gets the name of this service.
      */
     abstract fun getServiceName(): String
+
+    /*
+        Gets the job of this service.
+     */
+    fun getJob(): J {
+        return job
+    }
+
 }

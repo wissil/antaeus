@@ -4,6 +4,8 @@ plugins {
 
 kotlinProject()
 
+dataLibs()
+
 dependencies {
     implementation("org.quartz-scheduler:quartz:2.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.0.1")

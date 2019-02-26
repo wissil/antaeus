@@ -1,51 +1,93 @@
 package io.pleo.antaeus.core.services
 
-import io.pleo.antaeus.core.external.PaymentProvider
-import io.pleo.antaeus.core.services.billing.*
-import io.pleo.antaeus.models.Invoice
+import io.mockk.every
 import org.junit.jupiter.api.Test
-import org.quartz.*
-import java.lang.Thread.sleep
-import kotlin.random.Random
+import io.mockk.mockk
+import io.pleo.antaeus.core.external.PaymentProvider
+import io.pleo.antaeus.core.services.billing.BillingJob
+import io.pleo.antaeus.core.services.billing.BillingService
+import io.pleo.antaeus.data.AntaeusDal
+import io.pleo.antaeus.data.CustomerTable
+import io.pleo.antaeus.data.InvoiceTable
+import io.pleo.antaeus.models.InvoiceStatus
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.StdOutSqlLogger
+import org.jetbrains.exposed.sql.addLogger
+import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.quartz.SimpleScheduleBuilder
+import org.quartz.Trigger
+import org.quartz.TriggerBuilder
+import insertInitialData
+import org.junit.jupiter.api.Assertions.assertEquals
+import java.sql.Connection
 
 
 class BillingServiceTest {
 
+    /*
+        Mock instance of a payment provider. Returns true for every charge attempt.
+     */
+    private val paymentProvider = mockk<PaymentProvider> {
+        every { charge(any()) } returns true
+    }
 
-    @Test
-    fun `verify that the billing service runs asynchronously`() {
-        // register a new context job observer to the job
-        // this will help us get the return value from the async job
-        val observer = BillingServiceObserver()
+    companion object {
+        // The tables to create in the database.
+        private val tables = arrayOf(InvoiceTable, CustomerTable)
 
-        // create the billing service
-        val billingService = MockBillingService(createMockBillingJob(observer), createMockTrigger())
+        // Connect to the database and create the needed tables. Drop any existing data.
+        private val db = Database
+                .connect("jdbc:sqlite:/tmp/data.db", "org.sqlite.JDBC")
+                .also {
+                    TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+                    transaction(it) {
+                        addLogger(StdOutSqlLogger)
+                        // Drop all existing tables to ensure a clean slate on each run
+                        SchemaUtils.drop(*tables)
+                        // Create all tables
+                        SchemaUtils.create(*tables)
+                    }
+                }
 
-        // run the service asynchronously
-        billingService.runAsync()
+        private val antaeusDal = AntaeusDal(db)
 
-        var billingSuccess = false
-
-        // run the main thread
-        while (true) {
-            println("...")
-            sleep(500)
-            if (billingSuccess) break
-
-            billingSuccess = observer.success!!
+        @JvmStatic
+        @BeforeAll
+        internal fun beforeAll() {
+            // Insert example data in the database before test execution
+            insertInitialData(antaeusDal)
         }
 
-        // assert that async service returned
-        assert(billingSuccess)
+        @JvmStatic
+        @AfterAll
+        fun dropTables() {
+            // Drop example data after all test execute
+            transaction(db) {
+                SchemaUtils.drop(*tables)
+            }
+        }
     }
 
-    private fun createMockBillingJob(observer: BillingServiceObserver): JobDetail {
-        val data = JobDataMap()
-        data[BillingServiceObserver.OBSERVER_NAME] = observer
-        return JobBuilder.newJob(MockBillingJob::class.java).setJobData(data).build()
+    private val invoiceService = InvoiceService(dal = antaeusDal)
+
+    private val billingService = BillingService(BillingJob(), createTrigger(), paymentProvider, invoiceService)
+
+    @Test
+    fun `should update all pending invoices to paid`() {
+        // assert there are some pending invoices
+        assert(!invoiceService.fetchAllWithStatus(InvoiceStatus.PENDING).isEmpty())
+
+        billingService.execute()
+
+        // assert every invoice is paid
+        invoiceService.fetchAll().forEach { assertEquals(InvoiceStatus.PAID, it.status) }
     }
 
-    private fun createMockTrigger(): Trigger {
+    private fun createTrigger(): Trigger {
         val intervalInSeconds = 2
 
         return TriggerBuilder.newTrigger()
@@ -56,14 +98,5 @@ class BillingServiceTest {
                                 .withIntervalInSeconds(intervalInSeconds)
                                 .repeatForever())
                 .build()
-    }
-
-    // This is the mocked instance of the payment provider
-    internal fun getPaymentProvider(): PaymentProvider {
-        return object : PaymentProvider {
-            override fun charge(invoice: Invoice): Boolean {
-                return Random.nextBoolean()
-            }
-        }
     }
 }

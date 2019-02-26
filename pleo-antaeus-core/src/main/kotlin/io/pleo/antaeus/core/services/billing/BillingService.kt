@@ -13,19 +13,11 @@ import org.quartz.*
 private val logger = KotlinLogging.logger {}
 
 class BillingService(
+    job: BillingJob,
+    trigger: Trigger,
     private val paymentProvider: PaymentProvider,
     private val invoiceService: InvoiceService
-): AsyncService(
-        // set job
-        JobBuilder.newJob(BillingJob::class.java).build(),
-
-        // set trigger
-        TriggerBuilder.newTrigger()
-                .startNow()
-                .withSchedule(
-                        CronScheduleBuilder.
-                                monthlyOnDayAndHourAndMinute(1, 0, 0))
-                .build()) {
+): AsyncService<BillingJob>(job = job, trigger = trigger) {
 
     companion object {
         const val SERVICE_NAME = "BILLING_SERVICE"
