@@ -22,6 +22,7 @@ import org.quartz.SimpleScheduleBuilder
 import org.quartz.Trigger
 import org.quartz.TriggerBuilder
 import insertInitialData
+import io.pleo.antaeus.core.network.RetryService
 import io.pleo.antaeus.core.services.billing.InvoicePaymentExecutor
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.sql.Connection
@@ -35,6 +36,10 @@ class BillingServiceTest {
     private val paymentProvider = mockk<PaymentProvider> {
         every { charge(any()) } returns true
     }
+
+    private val retryService = mockk<RetryService> {}
+
+    private val supportService = mockk<SupportService> {}
 
     companion object {
         // The tables to create in the database.
@@ -74,7 +79,8 @@ class BillingServiceTest {
     }
 
     private val invoiceService = InvoiceService(dal = antaeusDal)
-    private val invoicePaymentExecutor = InvoicePaymentExecutor(paymentProvider = paymentProvider)
+    private val invoicePaymentExecutor =
+            InvoicePaymentExecutor(paymentProvider = paymentProvider, retryService = retryService, supportService = supportService)
 
     private val billingService = BillingService(BillingJob(), createTrigger(), invoiceService, invoicePaymentExecutor)
 

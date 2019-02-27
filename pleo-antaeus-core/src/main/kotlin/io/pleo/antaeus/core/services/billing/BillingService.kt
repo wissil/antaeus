@@ -24,11 +24,13 @@ class BillingService(
         logger.info("Billing execution started ...")
 
         invoiceService.fetchAllWithStatus(InvoiceStatus.PENDING).forEach {
-            if (invoicePaymentExecutor.executeInvoicePayment(it)) {
+            logger.info("Charging invoice with ID=${it.id} ...")
+
+            if (invoicePaymentExecutor.executePayment(it)) {
                 invoiceService.markInvoiceAsPaid(it)
                 logger.info("Invoice with ID=${it.id} successfully charged!")
             } else {
-                logger.warn("Invoice with ID=${it.id} couldn't be charged. Customer balance not sufficient.")
+                logger.warn("Invoice with ID=${it.id} couldn't be charged.")
             }
         }
 

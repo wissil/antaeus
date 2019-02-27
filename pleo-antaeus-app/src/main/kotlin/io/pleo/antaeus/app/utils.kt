@@ -1,10 +1,9 @@
 
 import io.pleo.antaeus.core.external.PaymentProvider
+import io.pleo.antaeus.core.network.RetryService
+import io.pleo.antaeus.core.services.SupportService
 import io.pleo.antaeus.data.AntaeusDal
-import io.pleo.antaeus.models.Currency
-import io.pleo.antaeus.models.Invoice
-import io.pleo.antaeus.models.InvoiceStatus
-import io.pleo.antaeus.models.Money
+import io.pleo.antaeus.models.*
 import org.quartz.*
 import java.math.BigDecimal
 import kotlin.random.Random
@@ -41,8 +40,8 @@ internal fun getTrigger(): Trigger {
             .build()
 }
 
-// This is a trigger that runs every 15 seconds; used only for testing purposes on the localhost
-internal fun getTestingTrigger(): Trigger {
+// This is a trigger that runs every 15 seconds; used only for debugging purposes on the localhost
+internal fun getDebugTrigger(): Trigger {
     return TriggerBuilder
             .newTrigger()
             .startNow()
@@ -59,5 +58,15 @@ internal fun getPaymentProvider(): PaymentProvider {
         override fun charge(invoice: Invoice): Boolean {
                 return Random.nextBoolean()
         }
+    }
+}
+
+// This is the mocked instance of the support service
+internal fun getSupportService(): SupportService {
+    return object : SupportService {
+        override fun raiseTicket(supportTicket: SupportTicket) {
+            // do nothing
+        }
+
     }
 }
