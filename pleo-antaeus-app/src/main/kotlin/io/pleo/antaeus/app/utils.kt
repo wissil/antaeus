@@ -5,10 +5,7 @@ import io.pleo.antaeus.models.Currency
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import io.pleo.antaeus.models.Money
-import org.quartz.CronScheduleBuilder
-import org.quartz.ScheduleBuilder
-import org.quartz.Trigger
-import org.quartz.TriggerBuilder
+import org.quartz.*
 import java.math.BigDecimal
 import kotlin.random.Random
 
@@ -41,6 +38,18 @@ internal fun getTrigger(): Trigger {
             .startNow()
             .withSchedule(CronScheduleBuilder
                     .monthlyOnDayAndHourAndMinute(1, 0, 0))
+            .build()
+}
+
+// This is a trigger that runs every 15 seconds; used only for testing purposes on the localhost
+internal fun getTestingTrigger(): Trigger {
+    return TriggerBuilder
+            .newTrigger()
+            .startNow()
+            .withSchedule(SimpleScheduleBuilder
+                    .simpleSchedule()
+                    .withIntervalInSeconds(15)
+                    .repeatForever())
             .build()
 }
 

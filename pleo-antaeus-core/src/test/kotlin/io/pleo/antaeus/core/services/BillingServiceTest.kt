@@ -22,6 +22,7 @@ import org.quartz.SimpleScheduleBuilder
 import org.quartz.Trigger
 import org.quartz.TriggerBuilder
 import insertInitialData
+import io.pleo.antaeus.core.services.billing.InvoicePaymentExecutor
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.sql.Connection
 
@@ -73,8 +74,9 @@ class BillingServiceTest {
     }
 
     private val invoiceService = InvoiceService(dal = antaeusDal)
+    private val invoicePaymentExecutor = InvoicePaymentExecutor(paymentProvider = paymentProvider)
 
-    private val billingService = BillingService(BillingJob(), createTrigger(), paymentProvider, invoiceService)
+    private val billingService = BillingService(BillingJob(), createTrigger(), invoiceService, invoicePaymentExecutor)
 
     @Test
     fun `should update all pending invoices to paid`() {

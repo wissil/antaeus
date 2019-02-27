@@ -1,10 +1,6 @@
 package io.pleo.antaeus.core.services.billing
 
 import io.pleo.antaeus.core.async.AsyncService
-import io.pleo.antaeus.core.exceptions.CurrencyMismatchException
-import io.pleo.antaeus.core.exceptions.CustomerNotFoundException
-import io.pleo.antaeus.core.exceptions.NetworkException
-import io.pleo.antaeus.core.external.PaymentProvider
 import io.pleo.antaeus.core.services.InvoiceService
 import io.pleo.antaeus.models.InvoiceStatus
 import mu.KotlinLogging
@@ -15,8 +11,8 @@ private val logger = KotlinLogging.logger {}
 class BillingService(
     job: BillingJob,
     trigger: Trigger,
-    private val paymentProvider: PaymentProvider,
-    private val invoiceService: InvoiceService
+    private val invoiceService: InvoiceService,
+    private val invoicePaymentExecutor: InvoicePaymentExecutor
 ): AsyncService<BillingJob>(job = job, trigger = trigger) {
 
     companion object {
@@ -28,22 +24,12 @@ class BillingService(
         logger.info("Billing execution started ...")
 
         invoiceService.fetchAllWithStatus(InvoiceStatus.PENDING).forEach {
-            logger.info("Charging invoice with ID=${it.id} ...")
-            try {
-                if (paymentProvider.charge(it)) {
-                    invoiceService.markInvoiceAsPaid(it)
-                    logger.info("Invoice with ID= ${it.id} successfully charged!")
-                } else {
-                    logger.warn("Invoice with ID=${it.id} couldn't be charged. Customer balance not sufficient.")
-                }
-            } catch (e: CustomerNotFoundException) {
-
-            } catch (e: CurrencyMismatchException) {
-
-            } catch (e: NetworkException) {
-
+            if (invoicePaymentExecutor.executeInvoicePayment(it)) {
+                invoiceService.markInvoiceAsPaid(it)
+                logger.info("Invoice with ID=${it.id} successfully charged!")
+            } else {
+                logger.warn("Invoice with ID=${it.id} couldn't be charged. Customer balance not sufficient.")
             }
-
         }
 
         logger.info("Billing successfully executed!")
