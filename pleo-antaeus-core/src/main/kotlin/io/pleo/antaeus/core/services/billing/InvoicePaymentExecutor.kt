@@ -36,13 +36,13 @@ class InvoicePaymentExecutor(
         try {
             return chargeInvoice(invoice)
         } catch (e: CustomerNotFoundException) {
-            logger.warn("Customer with ID=${invoice.customerId} not found.")
+            logger.warn("Customer with ID=${invoice.customerId} not found.", e)
             supportService.raiseTicket(SupportTicket("Customer with ID=${invoice.customerId} not found."))
         } catch (e: CurrencyMismatchException) {
-            logger.warn("Currency of invoice with ID=${invoice.id} doesn't match currency of customer with ID=${invoice.customerId}")
+            logger.warn("Currency of invoice with ID=${invoice.id} doesn't match currency of customer with ID=${invoice.customerId}", e)
             supportService.raiseTicket(SupportTicket("Currency of invoice with ID=${invoice.id} doesn't match currency of customer with ID=${invoice.customerId}"))
         } catch (e: NetworkException) {
-            logger.warn("Network error has occurred while attempting to charge invoice with ID=${invoice.id}")
+            logger.warn("Network error has occurred while attempting to charge invoice with ID=${invoice.id}", e)
             if (!retryService.retry { paymentProvider.charge(invoice) }) {
                 supportService.raiseTicket(SupportTicket("Network error has occurred while attempting to charge invoice with ID=${invoice.id}"))
             } else return true

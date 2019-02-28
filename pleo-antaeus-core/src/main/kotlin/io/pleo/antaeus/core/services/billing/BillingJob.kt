@@ -10,6 +10,8 @@ import org.quartz.JobExecutionContext
  */
 class BillingJob : AsyncJob {
 
+    private val detail = JobBuilder.newJob(this::class.java).build()
+
     override fun execute(context: JobExecutionContext?) {
         val schedulerContext = context?.scheduler?.context
         val billingService = schedulerContext?.get(BillingService.SERVICE_NAME) as BillingService
@@ -17,7 +19,7 @@ class BillingJob : AsyncJob {
     }
 
     override fun getJobDetail(): JobDetail {
-        return JobBuilder.newJob(this::class.java).build()
+        return detail
     }
 
 }
